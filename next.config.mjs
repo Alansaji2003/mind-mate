@@ -1,9 +1,13 @@
 /** @type {import('next').NextConfig} */
+const { withMonorepoPrismaWorkaround } = require('@prisma/nextjs-monorepo-workaround-plugin')
+
 const nextConfig = {
-  webpack(config) {
-    // Grab the existing rule that handles SVG imports
+  output: 'standalone', // required for serverless deployments
+
+  webpack(config, { isServer }) {
+    // --- SVG Handling ---
     const fileLoaderRule = config.module.rules.find((rule) =>
-      rule.test?.test?.(".svg")
+      rule.test?.test?.('.svg')
     );
 
     config.module.rules.push(
@@ -17,18 +21,17 @@ const nextConfig = {
       {
         test: /\.svg$/i,
         issuer: fileLoaderRule.issuer,
-        resourceQuery: { not: [...fileLoaderRule.resourceQuery.not, /url/] }, // exclude if *.svg?url
-        use: ["@svgr/webpack"],
+        resourceQuery: { not: [...(fileLoaderRule.resourceQuery?.not || []), /url/] },
+        use: ['@svgr/webpack'],
       }
     );
 
-    // Modify the file loader rule to ignore *.svg, since we have it handled now.
+    // Modify the file loader rule to ignore *.svg
     fileLoaderRule.exclude = /\.svg$/i;
 
     return config;
   },
-
-  // ...other config
 };
 
-export default nextConfig;
+// Wrap with Prisma plugin to ensure Query Engine is copied
+module.exports = withMonorepoPrismaWorkaround(nextConfig);
