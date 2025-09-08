@@ -1,0 +1,172 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  profile       UserProfile?   
+  messages      Message[]   @relation("UserMessages")   
+  feedbacks     Feedback[]  @relation("UserFeedbacks")  
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("verification")
+}
+
+
+enum UserRole {
+  SPEAKER
+  LISTENER
+}
+
+model UserProfile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  role      UserRole
+  topics    ListenerTopic[]       // 👈 back relation
+  availability ListenerAvailability[] // 👈 back relation
+  reputation ListenerReputation?  // 👈 one-to-one
+  conversationsAsSpeaker Conversation[] @relation("SpeakerConversations")
+  conversationsAsListener Conversation[] @relation("ListenerConversations")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ListenerTopic {
+  id        String      @id @default(uuid())
+  listenerId String
+  topic     String
+  listener  UserProfile @relation(fields: [listenerId], references: [id])
+}
+
+model ListenerAvailability {
+  id        String      @id @default(uuid())
+  listenerId String
+  dayOfWeek Int         // 0=Sunday ... 6=Saturday
+  startTime DateTime
+  endTime   DateTime
+  listener  UserProfile @relation(fields: [listenerId], references: [id])
+}
+
+model Conversation {
+  id          String     @id @default(uuid())
+  speakerId   String
+  listenerId  String
+  topic       String?
+  startedAt   DateTime   @default(now())
+  endedAt     DateTime?
+  isActive    Boolean    @default(true)
+  messages    Message[]
+  feedback    Feedback[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  speaker   UserProfile @relation("SpeakerConversations", fields: [speakerId], references: [id])
+  listener  UserProfile @relation("ListenerConversations", fields: [listenerId], references: [id])
+}
+enum MessageSource {
+  APPWRITE   // stored in Appwrite realtime DB
+  PRISMA     // stored directly in Postgres (fallback / analytics)
+}
+model Message {
+  id             String       @id @default(uuid())
+  content        String
+  createdAt      DateTime     @default(now())
+  senderId       String
+  conversationId String
+  sender         User         @relation("UserMessages", fields: [senderId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  isRead         Boolean      @default(false)
+  deletedAt      DateTime?
+  source         MessageSource @default(APPWRITE) // 👈 identify where the message came from
+  appwriteId     String? // 👈 store Appwrite doc ID (for syncing later)
+}
+
+model Feedback {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  givenById      String
+  givenBy        User         @relation("UserFeedbacks", fields: [givenById], references: [id])
+  rating         Int          @default(5)
+  comment        String?
+  createdAt      DateTime     @default(now())
+}
+
+model ListenerReputation {
+  id           String       @id @default(uuid())
+  listenerId   String       @unique
+  avgRating    Float        @default(0)
+  totalRatings Int          @default(0)
+  trustMeter   Float        @default(100)
+  badges       String[]
+  updatedAt    DateTime     @updatedAt
+  listener     UserProfile  @relation(fields: [listenerId], references: [id])
+}
