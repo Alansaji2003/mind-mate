@@ -1,9 +1,0 @@
-ignoredBuiltDependencies:
-  - prisma
-  - unrs-resolver
-
-onlyBuiltDependencies:
-  - '@prisma/client'
-  - '@prisma/engines'
-  - '@tailwindcss/oxide'
-  - sharp
