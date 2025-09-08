@@ -259,6 +259,19 @@ export function useNotifications() {
     })
   }, [])
 
+  const clearNotificationsForConversation = useCallback((conversationId: string) => {
+    setNotifications(prev => {
+      const conversationNotifications = prev.filter(n => n.conversationId === conversationId)
+      const unreadConversationNotifications = conversationNotifications.filter(n => !n.isRead)
+      
+      if (unreadConversationNotifications.length > 0) {
+        setUnreadCount(prevCount => Math.max(0, prevCount - unreadConversationNotifications.length))
+      }
+      
+      return prev.filter(n => n.conversationId !== conversationId)
+    })
+  }, [])
+
   const retryConnection = useCallback(() => {
     setConnectionFailed(false)
     // Force a re-render of the effect by updating session dependency
@@ -272,6 +285,7 @@ export function useNotifications() {
     markAsRead,
     markAllAsRead,
     removeNotification,
+    clearNotificationsForConversation,
     connectionFailed,
     retryConnection,
   }

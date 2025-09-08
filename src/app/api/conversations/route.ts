@@ -120,14 +120,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Always create a new conversation for each session
-    // This ensures each chat session can receive separate feedback
-    const conversation = await prisma.conversation.create({
-      data: {
+    // Check for existing active conversation between this speaker and listener
+    const existingConversation = await prisma.conversation.findFirst({
+      where: {
         speakerId: speakerProfile.id,
         listenerId: listenerProfile.id,
-        topic: topic || null,
-        isActive: true,
+        isActive: true
       },
       include: {
         speaker: {
@@ -139,67 +137,100 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    const isNewConversation = true
+    let conversation
+    let isNewConversation = false
 
-    // Always create a connection message in Appwrite to trigger real-time notifications
-    try {
-      const messageContent = topic 
-        ? `Connected to discuss: ${topic}`
-        : "Connected for conversation"
-      
-      await databases.createDocument(
-        env.NEXT_PUBLIC_APPWRITE_DB_ID,
-        env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION,
-        ID.unique(),
-        {
-          sessionId: conversation.id,
-          senderId: session.user.id,
-          content: messageContent,
+    if (existingConversation) {
+      // Return existing active conversation
+      conversation = existingConversation
+      isNewConversation = false
+    } else {
+      // Create a new conversation
+      conversation = await prisma.conversation.create({
+        data: {
+          speakerId: speakerProfile.id,
+          listenerId: listenerProfile.id,
+          topic: topic || null,
+          isActive: true,
+        },
+        include: {
+          speaker: {
+            include: { user: true }
+          },
+          listener: {
+            include: { user: true }
+          }
         }
-      )
-      
-    } catch (appwriteError) {
-      console.error("Failed to create message in Appwrite:", appwriteError)
-      // Don't fail the conversation creation if Appwrite fails
+      })
+      isNewConversation = true
     }
 
-    // Send email notification to listener
-    try {
-      const emailSubject = 'New Chat Session Started'
-      const emailTitle = 'New Chat Session Started'
-      const emailMessage = `A new chat session has been started with you by <strong>${speakerProfile.user.name}</strong>.`
-      
-      await resend.emails.send({
-        from: 'noreply@yourdomain.com', // Replace with your domain
-        to: listenerProfile.user.email,
-        subject: emailSubject,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">${emailTitle}</h2>
-            <p>Hello ${listenerProfile.user.name},</p>
-            <p>${emailMessage}</p>
-            ${topic ? `<p><strong>Topic:</strong> ${topic}</p>` : ''}
-            <p>Click the button below to ${isNewConversation ? 'join' : 'continue'} the conversation:</p>
-            <a href="${req.nextUrl.origin}/dashboard/chat/${conversation.id}" 
-               style="display: inline-block; background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">
-              Join Conversation
-            </a>
-            <p style="color: #666; font-size: 14px; margin-top: 24px;">
-              This is an automated notification. Please do not reply to this email.
-            </p>
-          </div>
-        `,
-      })
-    } catch (emailError) {
-      console.error("Failed to send email notification:", emailError)
-      // Don't fail the conversation creation if email fails
+    // Only create connection message for new conversations
+    if (isNewConversation) {
+      try {
+        const messageContent = topic 
+          ? `Connected to discuss: ${topic}`
+          : "Connected for conversation"
+        
+        await databases.createDocument(
+          env.NEXT_PUBLIC_APPWRITE_DB_ID,
+          env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION,
+          ID.unique(),
+          {
+            sessionId: conversation.id,
+            senderId: session.user.id,
+            content: messageContent,
+          }
+        )
+        
+      } catch (appwriteError) {
+        console.error("Failed to create message in Appwrite:", appwriteError)
+        // Don't fail the conversation creation if Appwrite fails
+      }
+    }
+
+    // Send email notification to listener only for new conversations
+    if (isNewConversation) {
+      try {
+        const emailSubject = 'New Chat Session Started'
+        const emailTitle = 'New Chat Session Started'
+        const emailMessage = `A new chat session has been started with you by <strong>${speakerProfile.user.name}</strong>.`
+        
+        console.log(`Sending email to: ${listenerProfile.user.email}`)
+        const emailResult = await resend.emails.send({
+          from: 'MINDMATE <onboarding@resend.dev>',
+          to: listenerProfile.user.email,
+          subject: emailSubject,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #333;">${emailTitle}</h2>
+              <p>Hello ${listenerProfile.user.name},</p>
+              <p>${emailMessage}</p>
+              ${topic ? `<p><strong>Topic:</strong> ${topic}</p>` : ''}
+              <p>Click the button below to join the conversation:</p>
+              <a href="${req.nextUrl.origin}/dashboard/chat/${conversation.id}" 
+                 style="display: inline-block; background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">
+                Join Conversation
+              </a>
+              <p style="color: #666; font-size: 14px; margin-top: 24px;">
+                This is an automated notification. Please do not reply to this email.
+              </p>
+            </div>
+          `,
+        })
+        console.log('Email sent successfully:', emailResult)
+      } catch (emailError) {
+        console.error("Failed to send email notification:", emailError)
+        console.error("Email error details:", emailError)
+        // Don't fail the conversation creation if email fails
+      }
     }
 
     return NextResponse.json({
       conversation,
       sessionId: conversation.id, // Use conversation ID as sessionId for Appwrite
       isNewConversation,
-      message: "New conversation created"
+      message: isNewConversation ? "New conversation created" : "Rejoined existing conversation"
     })
 
   } catch (err) {

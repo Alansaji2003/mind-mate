@@ -23,7 +23,9 @@ export default function ChatPage() {
   const [showFeedback, setShowFeedback] = useState(false)
   const [conversationData, setConversationData] = useState<{
     listenerName: string
+    isActive: boolean
   } | null>(null)
+  const [conversationEnded, setConversationEnded] = useState(false)
 
   const { messages, loading, sendMessage, sessionEnded } = useChat(sessionId, userId, userRole)
 
@@ -51,6 +53,15 @@ export default function ChatPage() {
     }
   }, [sessionEnded, userRole, conversationData, showFeedback, router])
 
+  // Handle accessing an already ended conversation
+  useEffect(() => {
+    if (conversationEnded) {
+      setTimeout(() => {
+        router.push("/dashboard")
+      }, 3000)
+    }
+  }, [conversationEnded, router])
+
   // Get user role and conversation data
   useEffect(() => {
     if (userId && sessionId) {
@@ -62,11 +73,27 @@ export default function ChatPage() {
 
       // Get conversation data for feedback
       fetch(`/api/conversations/${sessionId}`)
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) {
+            if (res.status === 404) {
+              setConversationEnded(true)
+              return null
+            }
+            throw new Error(`HTTP ${res.status}`)
+          }
+          return res.json()
+        })
         .then(data => {
-          setConversationData({
-            listenerName: data.listenerName
-          })
+          if (data) {
+            setConversationData({
+              listenerName: data.listenerName,
+              isActive: data.isActive
+            })
+            // If conversation is not active, show ended state
+            if (!data.isActive) {
+              setConversationEnded(true)
+            }
+          }
         })
         .catch(console.error)
     }
@@ -204,7 +231,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen flex-col relative overflow-hidden">
-      {/* Session Ended Overlay - Only show for listeners or speakers without feedback dialog */}
+      {/* Session Ended Overlay - Show when session ended during chat */}
       {sessionEnded && (userRole === "LISTENER" || (userRole === "SPEAKER" && !conversationData)) && (
         <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 text-center max-w-md mx-4">
@@ -217,8 +244,21 @@ export default function ChatPage() {
         </div>
       )}
 
+      {/* Conversation Already Ended Overlay - Show when accessing an ended conversation */}
+      {conversationEnded && (
+        <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 text-center max-w-md mx-4">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Session Has Ended</h2>
+            <p className="text-gray-600 mb-4">
+              This conversation has already ended. You will be redirected to the dashboard shortly.
+            </p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          </div>
+        </div>
+      )}
+
       {/* Header with End Session button for speakers */}
-      {userRole === "SPEAKER" && (
+      {userRole === "SPEAKER" && !conversationEnded && (
         <div className="flex justify-between items-center p-2 sm:p-4 border-b border-white/20 bg-black/50">
           <h1 className="text-lg font-semibold text-white">Chat Session</h1>
           <Button
@@ -235,10 +275,10 @@ export default function ChatPage() {
       )}
 
       {/* Conversation History */}
-      <ConversationHistory conversationId={sessionId} />
+      {!conversationEnded && <ConversationHistory conversationId={sessionId} />}
 
       <div className="flex-1 overflow-y-auto space-y-3 p-4">
-        {messages.map((msg) => (
+        {!conversationEnded && messages.map((msg) => (
           <ChatBubble
             key={msg.$id}
             message={msg.content}
@@ -254,7 +294,7 @@ export default function ChatPage() {
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          if (!input.trim() || sessionEnded) return
+          if (!input.trim() || sessionEnded || conversationEnded) return
           sendMessage(input)
           setInput("")
         }}
@@ -263,13 +303,13 @@ export default function ChatPage() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          disabled={sessionEnded}
+          disabled={sessionEnded || conversationEnded}
           className="flex-1 rounded-lg border px-3 py-2 text-black bg-white disabled:bg-gray-200 disabled:cursor-not-allowed text-base"
-          placeholder={sessionEnded ? "Session ended..." : "Type a message..."}
+          placeholder={sessionEnded || conversationEnded ? "Session ended..." : "Type a message..."}
         />
         <button
           type="submit"
-          disabled={sessionEnded}
+          disabled={sessionEnded || conversationEnded}
           className="rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           Send

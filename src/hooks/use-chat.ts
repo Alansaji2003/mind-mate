@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { Client, Databases, ID, Models, Query } from "appwrite"
 import { env } from "@/lib/env"
 import { updateConnectionStatus } from "./use-connection-status"
+import { useNotifications } from "./use-notifications"
 
 interface Message extends Models.Document {
   sessionId: string
@@ -22,6 +23,7 @@ export function useChat(sessionId: string, userId: string, userRole?: "SPEAKER" 
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [sessionEnded, setSessionEnded] = useState(false)
+  const { clearNotificationsForConversation } = useNotifications()
 
   // Always fetch messages whenever sessionId changes
   useEffect(() => {
@@ -82,6 +84,8 @@ export function useChat(sessionId: string, userId: string, userRole?: "SPEAKER" 
                 // Check if this is a session end message
                 if (message.content === "SESSION_ENDED" && message.senderId === "SYSTEM") {
                   setSessionEnded(true)
+                  // Clear notifications for this conversation when session ends
+                  clearNotificationsForConversation(sessionId)
                   // Don't auto-redirect - let the chat page handle it based on feedback completion
                   // Don't add system messages to the chat
                   return prev
