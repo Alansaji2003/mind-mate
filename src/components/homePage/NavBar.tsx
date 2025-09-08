@@ -36,7 +36,7 @@ export const NavBar = () => {
                 {/* Hamburger — visible at <=450px */}
                 <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="border border-white border-opacity-30 h-10 w-10 justify-center items-center rounded-lg hidden max-[450px]:flex"
+                    className="border border-white border-opacity-30 h-12 w-12 justify-center items-center rounded-lg hidden max-[450px]:flex touch-manipulation"
                 >
                     <MenuIcon className="text-white h-7 w-7" />
                 </button>

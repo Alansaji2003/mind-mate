@@ -30,7 +30,7 @@ export const Hero = () => {
                 <div className="inline-flex relative">
                     <h1
                         className="
-                         text-7xl md:text-9xl
+                         text-4xl sm:text-6xl md:text-7xl lg:text-9xl
     font-bold tracking-tighter text-center inline-flex
   "
                     >

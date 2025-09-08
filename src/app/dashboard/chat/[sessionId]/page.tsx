@@ -203,7 +203,7 @@ export default function ChatPage() {
   if (loading) return <p>Loading chat messages...</p>
 
   return (
-    <div className="flex h-full flex-col relative">
+    <div className="flex h-screen flex-col relative overflow-hidden">
       {/* Session Ended Overlay - Only show for listeners or speakers without feedback dialog */}
       {sessionEnded && (userRole === "LISTENER" || (userRole === "SPEAKER" && !conversationData)) && (
         <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50">
@@ -219,7 +219,7 @@ export default function ChatPage() {
 
       {/* Header with End Session button for speakers */}
       {userRole === "SPEAKER" && (
-        <div className="flex justify-between items-center p-4 border-b border-white/20">
+        <div className="flex justify-between items-center p-2 sm:p-4 border-b border-white/20 bg-black/50">
           <h1 className="text-lg font-semibold text-white">Chat Session</h1>
           <Button
             onClick={handleEndSession}
@@ -258,13 +258,13 @@ export default function ChatPage() {
           sendMessage(input)
           setInput("")
         }}
-        className="flex gap-2 p-3 border-t border-white/20"
+        className="flex gap-2 p-2 sm:p-3 border-t border-white/20 bg-black/50"
       >
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={sessionEnded}
-          className="flex-1 rounded-lg border px-3 py-2 text-white disabled:bg-gray-200 disabled:cursor-not-allowed"
+          className="flex-1 rounded-lg border px-3 py-2 text-black bg-white disabled:bg-gray-200 disabled:cursor-not-allowed text-base"
           placeholder={sessionEnded ? "Session ended..." : "Type a message..."}
         />
         <button
