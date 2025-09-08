@@ -1,4 +1,4 @@
-import { withMonorepoPrismaWorkaround } from '@prisma/nextjs-monorepo-workaround-plugin';
+import prismaWorkaround from '@prisma/nextjs-monorepo-workaround-plugin';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -32,4 +32,5 @@ const nextConfig = {
   },
 };
 
+const { withMonorepoPrismaWorkaround } = prismaWorkaround;
 export default withMonorepoPrismaWorkaround(nextConfig);
