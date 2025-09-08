@@ -137,8 +137,9 @@ export default function FeedbackPage() {
                     <div>
                       <p className="text-sm text-gray-300 mb-1">Your feedback:</p>
                       <p className="text-sm text-gray-400 bg-gray-700 rounded p-3">
-                        "{feedback.comment}"
-                      </p>
+                        {feedback.comment}
+                          </p>
+
                     </div>
                   )}
 

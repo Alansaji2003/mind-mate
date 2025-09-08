@@ -9,6 +9,7 @@ export const Feature = ({ index, feature }: { index: number, feature: { title: s
     const offsetY = useMotionValue(-100);
     const maskImage = useMotionTemplate`radial-gradient(100px at ${offsetX}px ${offsetY}px, black, transparent)`;
     const border = useRef<HTMLDivElement>(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         const updateMousePosition = (e: MouseEvent) => {
 
