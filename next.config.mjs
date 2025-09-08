@@ -1,4 +1,5 @@
-import prismaWorkaround from '@prisma/nextjs-monorepo-workaround-plugin';
+// next.config.mjs
+import { PrismaPlugin } from '@prisma/nextjs-monorepo-workaround-plugin'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -8,7 +9,7 @@ const nextConfig = {
     // --- SVG Handling ---
     const fileLoaderRule = config.module.rules.find((rule) =>
       rule.test?.test?.('.svg')
-    );
+    )
 
     config.module.rules.push(
       {
@@ -24,13 +25,15 @@ const nextConfig = {
         },
         use: ['@svgr/webpack'],
       }
-    );
+    )
 
-    fileLoaderRule.exclude = /\.svg$/i;
+    fileLoaderRule.exclude = /\.svg$/i
 
-    return config;
+    // add PrismaPlugin
+    config.plugins.push(new PrismaPlugin())
+
+    return config
   },
-};
+}
 
-const { withMonorepoPrismaWorkaround } = prismaWorkaround;
-export default withMonorepoPrismaWorkaround(nextConfig);
+export default nextConfig
