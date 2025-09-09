@@ -15,9 +15,10 @@ export const env = createEnv({
   client: {
     NEXT_PUBLIC_APPWRITE_PROJECT_ID: z.string().min(1),
     NEXT_PUBLIC_APPWRITE_PROJECT_NAME: z.string().min(1),
-    NEXT_PUBLIC_APPWRITE_ENDPOINT: z.string().url(),
+    NEXT_PUBLIC_APPWRITE_ENDPOINT: z.url(),
     NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION: z.string().min(1),
     NEXT_PUBLIC_APPWRITE_DB_ID: z.string().min(1),
+    NEXT_PUBLIC_APP_URL:z.url(),
     
   },
 
@@ -30,6 +31,7 @@ export const env = createEnv({
     NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION:
       process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION,
     NEXT_PUBLIC_APPWRITE_DB_ID: process.env.NEXT_PUBLIC_APPWRITE_DB_ID,
+     NEXT_PUBLIC_APP_URL:process.env.NEXT_PUBLIC_APP_URL
     
   },
 });

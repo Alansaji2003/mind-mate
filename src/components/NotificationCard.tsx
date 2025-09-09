@@ -110,3 +110,4 @@ export function NotificationCard({ notification, onMarkAsRead, onRemove }: Notif
     </Card>
   )
 }
+

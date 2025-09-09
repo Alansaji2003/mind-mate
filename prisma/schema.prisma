@@ -91,9 +91,9 @@ model UserProfile {
   userId    String   @unique
   user      User     @relation(fields: [userId], references: [id])
   role      UserRole
-  topics    ListenerTopic[]       // 👈 back relation
-  availability ListenerAvailability[] // 👈 back relation
-  reputation ListenerReputation?  // 👈 one-to-one
+  topics    ListenerTopic[]       
+  availability ListenerAvailability[] 
+  reputation ListenerReputation?  
   conversationsAsSpeaker Conversation[] @relation("SpeakerConversations")
   conversationsAsListener Conversation[] @relation("ListenerConversations")
   createdAt DateTime @default(now())
@@ -110,7 +110,7 @@ model ListenerTopic {
 model ListenerAvailability {
   id        String      @id @default(uuid())
   listenerId String
-  dayOfWeek Int         // 0=Sunday ... 6=Saturday
+  dayOfWeek Int         
   startTime DateTime
   endTime   DateTime
   listener  UserProfile @relation(fields: [listenerId], references: [id])
@@ -146,8 +146,8 @@ model Message {
   conversation   Conversation @relation(fields: [conversationId], references: [id])
   isRead         Boolean      @default(false)
   deletedAt      DateTime?
-  source         MessageSource @default(APPWRITE) // 👈 identify where the message came from
-  appwriteId     String? // 👈 store Appwrite doc ID (for syncing later)
+  source         MessageSource @default(APPWRITE) 
+  appwriteId     String? 
 }
 
 model Feedback {

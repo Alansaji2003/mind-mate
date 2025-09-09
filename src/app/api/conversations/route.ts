@@ -10,6 +10,7 @@ const client = new Client()
   .setProject(env.NEXT_PUBLIC_APPWRITE_PROJECT_ID)
 
 const databases = new Databases(client)
+const baseUrl = env.NEXT_PUBLIC_APP_URL
 
 export async function GET(req: NextRequest) {
   try {
@@ -208,7 +209,7 @@ export async function POST(req: NextRequest) {
               <p>${emailMessage}</p>
               ${topic ? `<p><strong>Topic:</strong> ${topic}</p>` : ''}
               <p>Click the button below to join the conversation:</p>
-              <a href="${req.nextUrl.origin}/dashboard/chat/${conversation.id}" 
+              <a href="${baseUrl}/dashboard/chat/${conversation.id}" 
                  style="display: inline-block; background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">
                 Join Conversation
               </a>
