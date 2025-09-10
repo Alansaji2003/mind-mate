@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
       try {
         const emailSubject = 'New Chat Session Started'
         const emailTitle = 'New Chat Session Started'
-        const emailMessage = `A new chat session has been started with you by <strong>${speakerProfile.user.name}</strong>.`
+        const emailMessage = `A new chat session has been started with you by a <strong>MINDMATER!</strong>.`
         
         console.log(`Sending email to: ${listenerProfile.user.email}`)
         const emailResult = await resend.emails.send({

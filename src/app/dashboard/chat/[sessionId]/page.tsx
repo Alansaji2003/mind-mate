@@ -4,11 +4,13 @@ import { useChat } from "@/hooks/use-chat"
 import { ChatBubble } from "@/components/ChatBubble"
 import { ConversationHistory } from "@/components/ConversationHistory"
 import { FeedbackDialog } from "@/components/FeedbackDialog"
+import { InsightsDialog } from "@/components/InsightsDialog"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { PhoneOff } from "lucide-react"
+import { useNotifications } from "@/hooks/use-notifications"
 
 export default function ChatPage() {
   const { data: session, isPending } = authClient.useSession()
@@ -17,141 +19,93 @@ export default function ChatPage() {
   const sessionId = params?.sessionId || ""
   const userId = session?.user?.id || ""
 
-  const [input, setInput] = useState("")
-  const [isEnding, setIsEnding] = useState(false)
   const [userRole, setUserRole] = useState<"SPEAKER" | "LISTENER" | null>(null)
   const [showFeedback, setShowFeedback] = useState(false)
-  const [conversationData, setConversationData] = useState<{
-    listenerName: string
-    isActive: boolean
-  } | null>(null)
+  const [conversationData, setConversationData] = useState<{ listenerName: string; isActive: boolean } | null>(null)
   const [conversationEnded, setConversationEnded] = useState(false)
+  const [isEnding, setIsEnding] = useState(false)
+  const [showInsights, setShowInsights] = useState(false)
+  const [input, setInput] = useState("")
 
-  const { messages, loading, sendMessage, sessionEnded } = useChat(sessionId, userId, userRole)
+  const { clearNotificationsForConversation } = useNotifications()
+  const { messages, loading, sendMessage, sessionEnded, connectionState } = useChat(sessionId, userId)
 
-  // 🔊 Track previous message count
+  const bottomRef = useRef<HTMLDivElement>(null)
   const prevMsgCount = useRef(messages.length)
 
-  // 📜 Ref for auto-scroll
-  const bottomRef = useRef<HTMLDivElement>(null)
-
-  // Handle session end and feedback flow
+  // Fetch user role and conversation data
   useEffect(() => {
-    if (sessionEnded && userRole === "SPEAKER" && conversationData && !showFeedback) {
-      // Show feedback dialog for speakers when session ends
-      setShowFeedback(true)
-    } else if (sessionEnded && userRole === "LISTENER") {
-      // Listeners go directly to dashboard when session ends
-      setTimeout(() => {
-        router.push("/dashboard")
-      }, 3000)
-    } else if (sessionEnded && userRole === "SPEAKER" && !conversationData) {
-      // If speaker but no conversation data, redirect after delay
-      setTimeout(() => {
-        router.push("/dashboard/listeners")
-      }, 3000)
-    }
-  }, [sessionEnded, userRole, conversationData, showFeedback, router])
+    if (!userId || !sessionId) return
 
-  // Handle accessing an already ended conversation
-  useEffect(() => {
-    if (conversationEnded) {
-      setTimeout(() => {
-        router.push("/dashboard")
-      }, 3000)
-    }
-  }, [conversationEnded, router])
+    // Get user role
+    fetch("/api/user/find_role")
+      .then(res => res.json())
+      .then(data => setUserRole(data.role))
+      .catch(console.error)
 
-  // Get user role and conversation data
-  useEffect(() => {
-    if (userId && sessionId) {
-      // Get user role
-      fetch("/api/user/find_role")
-        .then(res => res.json())
-        .then(data => setUserRole(data.role))
-        .catch(console.error)
-
-      // Get conversation data for feedback
-      fetch(`/api/conversations/${sessionId}`)
-        .then(res => {
-          if (!res.ok) {
-            if (res.status === 404) {
-              setConversationEnded(true)
-              return null
-            }
-            throw new Error(`HTTP ${res.status}`)
+    // Get conversation data
+    fetch(`/api/conversations/${sessionId}`)
+      .then(res => {
+        if (!res.ok) {
+          if (res.status === 404) {
+            setConversationEnded(true)
+            return null
           }
-          return res.json()
-        })
-        .then(data => {
-          if (data) {
-            setConversationData({
-              listenerName: data.listenerName,
-              isActive: data.isActive
-            })
-            // If conversation is not active, show ended state
-            if (!data.isActive) {
-              setConversationEnded(true)
-            }
-          }
-        })
-        .catch(console.error)
-    }
+          throw new Error(`HTTP ${res.status}`)
+        }
+        return res.json()
+      })
+      .then(data => {
+        if (data) {
+          setConversationData({ listenerName: data.listenerName, isActive: data.isActive })
+          if (!data.isActive) setConversationEnded(true)
+        }
+      })
+      .catch(console.error)
   }, [userId, sessionId])
 
-  // Auto-end session when speaker navigates away
+  // Clear notifications on session end
   useEffect(() => {
-    if (userRole === "SPEAKER" && sessionId) {
-      const handleBeforeUnload = async () => {
-        // End the session when speaker leaves
-        try {
-          await fetch(`/api/conversations/${sessionId}`, {
-            method: "DELETE",
-            keepalive: true // Ensure request completes even if page is closing
-          })
-        } catch (error) {
-          console.error("Failed to auto-end session:", error)
-        }
-      }
-
-
-
-      // End session when page unloads (navigation, refresh, close)
-      window.addEventListener("beforeunload", handleBeforeUnload)
-
-      // Optional: End session when tab becomes hidden
-      // document.addEventListener("visibilitychange", handleVisibilityChange)
-
-      return () => {
-        window.removeEventListener("beforeunload", handleBeforeUnload)
-        // document.removeEventListener("visibilitychange", handleVisibilityChange)
-      }
+    if (sessionEnded && sessionId) {
+      clearNotificationsForConversation(sessionId)
     }
-  }, [userRole, sessionId])
+  }, [sessionEnded, sessionId, clearNotificationsForConversation])
+
+  // Handle session end redirects and feedback
+  useEffect(() => {
+    if (!sessionEnded) return
+
+    if (userRole === "SPEAKER" && conversationData && !showFeedback && !showInsights) {
+      setShowInsights(true)
+    } else if (userRole === "LISTENER") {
+      setTimeout(() => router.push("/dashboard"), 3000)
+    } else if (userRole === "SPEAKER" && !conversationData) {
+      setTimeout(() => router.push("/dashboard/listeners"), 3000)
+    }
+  }, [sessionEnded, userRole, conversationData, showFeedback, showInsights, router])
+
+  // Handle accessing already ended conversation
+  useEffect(() => {
+    if (!conversationEnded) return
+    setTimeout(() => router.push("/dashboard"), 3000)
+  }, [conversationEnded, router])
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    if (messages.length > prevMsgCount.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+    prevMsgCount.current = messages.length
+  }, [messages])
 
   const handleEndSession = async () => {
-    // Use a more user-friendly confirmation
-    const confirmed = window.confirm("Are you sure you want to end this session? This action cannot be undone.")
-    if (!confirmed) return
-
+    if (!window.confirm("Are you sure you want to end this session? This action cannot be undone.")) return
     setIsEnding(true)
     try {
-      const response = await fetch(`/api/conversations/${sessionId}`, {
-        method: "DELETE"
-      })
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to end session")
-      }
-      
-      // The session end will be handled by the useEffect that watches for sessionEnded
-      // No need to manually show feedback or redirect here
-    } catch (error) {
-      console.error("Error ending session:", error)
-      // Could add toast notification here instead of alert
-      const errorMessage = error instanceof Error ? error.message : "Failed to end session. Please try again."
-      // For now, we'll use a more subtle approach - just log and let user retry
-      console.warn("Session end failed:", errorMessage)
+      const res = await fetch(`/api/conversations/${sessionId}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to end session")
+    } catch (err) {
+      console.error(err)
     } finally {
       setIsEnding(false)
     }
@@ -159,115 +113,53 @@ export default function ChatPage() {
 
   const handleFeedbackSubmit = async (rating: number, comment?: string) => {
     try {
-      const response = await fetch("/api/feedback", {
+      const res = await fetch("/api/feedback", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          conversationId: sessionId,
-          rating,
-          comment,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId: sessionId, rating, comment }),
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to submit feedback")
-      }
-
-      // Redirect to listeners page after feedback
+      if (!res.ok) throw new Error("Failed to submit feedback")
       router.push("/dashboard/listeners")
-    } catch (error) {
-      console.error("Error submitting feedback:", error)
-      // Error is handled by FeedbackDialog with toast
-      throw error
+    } catch (err) {
+      console.error(err)
+      throw err
     }
   }
 
   const handleFeedbackClose = () => {
     setShowFeedback(false)
-    // Redirect even if they skip feedback
     router.push("/dashboard/listeners")
   }
 
-  useEffect(() => {
-    if (messages.length > prevMsgCount.current) {
-      const lastMsg = messages[messages.length - 1]
-
-      // ✅ Play sound if new message is from others
-      if (lastMsg.senderId !== userId) {
-        const audio = new Audio("/notification.mp3") // put file in /public
-        audio.play().catch(() => { })
-      }
-
-      // ✅ Flash title if tab not focused
-      if (document.hidden && lastMsg.senderId !== userId) {
-        const originalTitle = document.title
-        let flash = true
-        const interval = setInterval(() => {
-          document.title = flash ? "🔔 New Message!" : originalTitle
-          flash = !flash
-        }, 1000)
-
-        const stopFlashing = () => {
-          clearInterval(interval)
-          document.title = originalTitle
-          document.removeEventListener("visibilitychange", stopFlashing)
-        }
-
-        document.addEventListener("visibilitychange", stopFlashing)
-      }
-    }
-
-    prevMsgCount.current = messages.length
-
-    // 📜 Always scroll to bottom on new messages
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages, userId])
+  const handleInsightsClose = () => {
+    setShowInsights(false)
+    if (userRole === "SPEAKER" && conversationData) setShowFeedback(true)
+    else router.push("/dashboard")
+  }
 
   if (isPending || !sessionId || !userId) return <p>Loading chat...</p>
-  if (loading) return <p>Loading chat messages...</p>
+  if (loading) return <p>Loading messages...</p>
 
   return (
     <div className="flex h-screen flex-col relative overflow-hidden">
-      {/* Session Ended Overlay - Show when session ended during chat */}
-      {sessionEnded && (userRole === "LISTENER" || (userRole === "SPEAKER" && !conversationData)) && (
+      {/* Session Ended Overlay */}
+      {(sessionEnded || conversationEnded) && (
         <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 text-center max-w-md mx-4">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Session Ended</h2>
             <p className="text-gray-600 mb-4">
-              The conversation has been ended. You will be redirected shortly.
+              The conversation has ended. You will be redirected shortly.
             </p>
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
           </div>
         </div>
       )}
 
-      {/* Conversation Already Ended Overlay - Show when accessing an ended conversation */}
-      {conversationEnded && (
-        <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 text-center max-w-md mx-4">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Session Has Ended</h2>
-            <p className="text-gray-600 mb-4">
-              This conversation has already ended. You will be redirected to the dashboard shortly.
-            </p>
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-          </div>
-        </div>
-      )}
-
-      {/* Header with End Session button for speakers */}
+      {/* Header with End Session button */}
       {userRole === "SPEAKER" && !conversationEnded && (
         <div className="flex justify-between items-center p-2 sm:p-4 border-b border-white/20 bg-black/50">
           <h1 className="text-lg font-semibold text-white">Chat Session</h1>
-          <Button
-            onClick={handleEndSession}
-            disabled={isEnding}
-            variant="destructive"
-            size="sm"
-            className="bg-red-600 hover:bg-red-700"
-          >
+          <Button onClick={handleEndSession} disabled={isEnding} variant="destructive" size="sm" className="bg-red-600 hover:bg-red-700">
             <PhoneOff className="h-4 w-4 mr-2" />
             {isEnding ? "Ending..." : "End Session"}
           </Button>
@@ -278,21 +170,15 @@ export default function ChatPage() {
       {!conversationEnded && <ConversationHistory conversationId={sessionId} />}
 
       <div className="flex-1 overflow-y-auto space-y-3 p-4">
-        {!conversationEnded && messages.map((msg) => (
-          <ChatBubble
-            key={msg.$id}
-            message={msg.content}
-            senderId={msg.senderId}
-            currentUserId={userId}
-            createdAt={msg.$createdAt}
-          />
+        {!conversationEnded && messages.map(msg => (
+          <ChatBubble key={msg.$id} message={msg.content} senderId={msg.senderId} currentUserId={userId} createdAt={msg.$createdAt} />
         ))}
-        {/* 📜 Scroll anchor */}
         <div ref={bottomRef} />
       </div>
 
+      {/* Input */}
       <form
-        onSubmit={(e) => {
+        onSubmit={e => {
           e.preventDefault()
           if (!input.trim() || sessionEnded || conversationEnded) return
           sendMessage(input)
@@ -302,29 +188,23 @@ export default function ChatPage() {
       >
         <input
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={e => setInput(e.target.value)}
           disabled={sessionEnded || conversationEnded}
-          className="flex-1 rounded-lg border px-3 py-2 text-black bg-white disabled:bg-gray-200 disabled:cursor-not-allowed text-base"
           placeholder={sessionEnded || conversationEnded ? "Session ended..." : "Type a message..."}
+          className="flex-1 rounded-lg border px-3 py-2 text-black bg-white disabled:bg-gray-200 disabled:cursor-not-allowed text-base"
         />
-        <button
-          type="submit"
-          disabled={sessionEnded || conversationEnded}
-          className="rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-        >
+        <button type="submit" disabled={sessionEnded || conversationEnded} className="rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
           Send
         </button>
       </form>
 
       {/* Feedback Dialog */}
       {showFeedback && conversationData && (
-        <FeedbackDialog
-          isOpen={showFeedback}
-          onClose={handleFeedbackClose}
-          onSubmit={handleFeedbackSubmit}
-          listenerName={conversationData.listenerName}
-        />
+        <FeedbackDialog isOpen={showFeedback} onClose={handleFeedbackClose} onSubmit={handleFeedbackSubmit} listenerName={conversationData.listenerName} />
       )}
+
+      {/* Insights Dialog */}
+      {showInsights && <InsightsDialog isOpen={showInsights} onClose={handleInsightsClose} messages={messages} conversationId={sessionId} />}
     </div>
   )
 }

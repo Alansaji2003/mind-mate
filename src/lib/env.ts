@@ -3,13 +3,15 @@ import { z } from "zod";
 
 export const env = createEnv({
   server: {
-    DATABASE_URL: z.string().url(),
+    DATABASE_URL: z.url(),
     BETTER_AUTH_SECRET: z.string().min(1),
-    BETTER_AUTH_URL: z.string().url(),
+    BETTER_AUTH_URL: z.url(),
     GOOGLE_CLIENT_ID: z.string().min(1),
     GOOGLE_CLIENT_SECRET: z.string().min(1),
     RESEND_API_KEY: z.string().min(1),
     ARCJET_KEY: z.string().min(1),
+    HF_API_KEY:z.string().min(1),
+    MODEL_URL:z.string().min(1),
   },
 
   client: {
@@ -19,6 +21,7 @@ export const env = createEnv({
     NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION: z.string().min(1),
     NEXT_PUBLIC_APPWRITE_DB_ID: z.string().min(1),
     NEXT_PUBLIC_APP_URL:z.url(),
+
     
   },
 
@@ -31,7 +34,7 @@ export const env = createEnv({
     NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION:
       process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION,
     NEXT_PUBLIC_APPWRITE_DB_ID: process.env.NEXT_PUBLIC_APPWRITE_DB_ID,
-     NEXT_PUBLIC_APP_URL:process.env.NEXT_PUBLIC_APP_URL
+    NEXT_PUBLIC_APP_URL:process.env.NEXT_PUBLIC_APP_URL
     
   },
 });

@@ -29,6 +29,9 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.1.1)
+      '@huggingface/inference':
+        specifier: ^4.7.1
+        version: 4.7.1
       '@prisma/client':
         specifier: ^6.15.0
         version: 6.15.0(prisma@6.15.0(typescript@5.9.2))(typescript@5.9.2)
@@ -937,6 +940,17 @@ packages:
 
   '@hexagon/base64@1.1.28':
     resolution: {integrity: sha512-lhqDEAvWixy3bZ+UOYbPwUbBkwBq5C1LAJ/xPC8Oi+lL54oyakv/npbA0aU2hgCsx/1NUd4IBvV03+aUBWxerw==}
+
+  '@huggingface/inference@4.7.1':
+    resolution: {integrity: sha512-gXrMocGDsE6kUZPEj82c3O+/OKnIfbHvg9rYjGA6svbWrYVmHCIAdCrrgCwNl2v5GELfPJrrfIv0bvzCTfa64A==}
+    engines: {node: '>=18'}
+
+  '@huggingface/jinja@0.5.1':
+    resolution: {integrity: sha512-yUZLld4lrM9iFxHCwFQ7D1HW2MWMwSbeB7WzWqFYDWK+rEb+WldkLdAJxUPOmgICMHZLzZGVcVjFh3w/YGubng==}
+    engines: {node: '>=18'}
+
+  '@huggingface/tasks@0.19.45':
+    resolution: {integrity: sha512-lM3QOgbfkGZ5gAZOYWOmzMM6BbKcXOIHjgnUAoymTdZEcEcGSr0vy/LWGEiK+vBXC4vU+sCT+WNoA/JZ8TEWdA==}
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -5119,6 +5133,15 @@ snapshots:
   '@floating-ui/utils@0.2.10': {}
 
   '@hexagon/base64@1.1.28': {}
+
+  '@huggingface/inference@4.7.1':
+    dependencies:
+      '@huggingface/jinja': 0.5.1
+      '@huggingface/tasks': 0.19.45
+
+  '@huggingface/jinja@0.5.1': {}
+
+  '@huggingface/tasks@0.19.45': {}
 
   '@humanfs/core@0.19.1': {}
 

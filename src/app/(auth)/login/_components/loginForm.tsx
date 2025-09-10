@@ -55,7 +55,7 @@ export function LoginForm() {
         }
     
     return(
-        <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-black via-purple-900 to-purple-600">
+        <div className="min-h-screen flex items-center justify-center p-4 ">
         <Card className="w-full max-w-md mx-auto">
             <CardHeader>
                 <CardTitle className="text-xl">
