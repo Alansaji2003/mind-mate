@@ -23,7 +23,7 @@ export const Feature = ({ index, feature }: { index: number, feature: { title: s
        return () => {
         window.removeEventListener('mousemove', updateMousePosition)
        }
-    }, []);
+    }, [offsetX, offsetY]);
     return (
         <div key={index} className="border border-white/30 px-5 py-10 text-center rounded-xl sm:flex-1 relative">
             <motion.div className="absolute inset-0 border-2 border-purple-400 rounded-xl" style={{maskImage:maskImage, WebkitMaskImage:maskImage}}

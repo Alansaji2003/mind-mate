@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   Dialog,
   DialogContent,
@@ -18,29 +18,21 @@ interface InsightsDialogProps {
   conversationId: string
 }
 
-export function InsightsDialog({ isOpen, onClose, messages, conversationId }: InsightsDialogProps) {
+export function InsightsDialog({
+  isOpen,
+  onClose,
+  messages,
+  conversationId,
+}: InsightsDialogProps) {
   const [insights, setInsights] = useState<string>("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>("")
 
-  useEffect(() => {
-    if (isOpen && messages.length > 0 && !insights && !loading) {
-      generateInsights()
-    }
-  }, [isOpen, messages])
-
-  // Scroll to top whenever new insights arrive
-  useEffect(() => {
-    if (!loading && insights) {
-      const container = document.getElementById("insights-container")
-      container?.scrollTo({ top: 0, behavior: "smooth" })
-    }
-  }, [loading, insights])
-
-  const generateInsights = async () => {
+  // Memoized generateInsights
+  const generateInsights = useCallback(async () => {
     setLoading(true)
     setError("")
-    
+
     try {
       const response = await fetch("/api/insights", {
         method: "POST",
@@ -74,7 +66,22 @@ export function InsightsDialog({ isOpen, onClose, messages, conversationId }: In
     } finally {
       setLoading(false)
     }
-  }
+  }, [messages, conversationId])
+
+  // Trigger insights generation
+  useEffect(() => {
+    if (isOpen && messages.length > 0 && !insights && !loading) {
+      generateInsights()
+    }
+  }, [isOpen, messages, insights, loading, generateInsights])
+
+  // Scroll to top whenever new insights arrive
+  useEffect(() => {
+    if (!loading && insights) {
+      const container = document.getElementById("insights-container")
+      container?.scrollTo({ top: 0, behavior: "smooth" })
+    }
+  }, [loading, insights])
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -82,7 +89,7 @@ export function InsightsDialog({ isOpen, onClose, messages, conversationId }: In
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-purple-700">
             <Heart className="h-5 w-5" />
-           AI Reflections & Insights
+            AI Reflections & Insights
           </DialogTitle>
           <DialogDescription>
             Here are some thoughtful reflections on your conversation today.
@@ -93,7 +100,9 @@ export function InsightsDialog({ isOpen, onClose, messages, conversationId }: In
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
-              <span className="ml-2 text-gray-600">Generating personalized insights...</span>
+              <span className="ml-2 text-gray-600">
+                Generating personalized insights...
+              </span>
             </div>
           ) : error ? (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
