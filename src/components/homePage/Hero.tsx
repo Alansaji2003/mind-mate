@@ -38,17 +38,31 @@ export const Hero = () => {
                     </h1>
 
                     <motion.div 
-                        className="absolute right-[550px] -top-[130px] hidden sm:inline z-10"
+                        className="absolute -left-16 -top-32 hidden lg:inline z-10"
                         drag
                     >
-                        <Image src={HeroImage} alt="" height="200" width="200" className="max-w-none" draggable={false} />
+                        <Image 
+                            src={HeroImage} 
+                            alt="" 
+                            height="120" 
+                            width="120" 
+                            className="max-w-none lg:h-48 lg:w-48" 
+                            draggable={false} 
+                        />
                     </motion.div>
                     <motion.div 
-                        className="absolute top-[56px] -right-[100px] hidden sm:inline z-10"
+                        className="absolute -top-12 -right-12 hidden lg:inline z-10"
                         drag
                         dragSnapToOrigin
                     >
-                        <Image src={HeroImageStar} alt="" height="200" width="200" className="max-w-none" draggable={false} />
+                        <Image 
+                            src={HeroImageStar} 
+                            alt="" 
+                            height="100" 
+                            width="100" 
+                            className="max-w-none lg:h-40 lg:w-40" 
+                            draggable={false} 
+                        />
                     </motion.div>
                 </div>
 
